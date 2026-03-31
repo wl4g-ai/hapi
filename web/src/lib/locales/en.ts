@@ -208,6 +208,9 @@ export default {
   'composer.send': 'Send',
   'composer.stop': 'Stop',
   'composer.voice': 'Voice assistant',
+  'composer.pause': 'Pause generation',
+  'composer.resume': 'Resume generation',
+  'composer.queued': 'queued',
 
   // Voice assistant
   'voice.connecting': 'Connecting...',

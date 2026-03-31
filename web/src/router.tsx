@@ -33,6 +33,7 @@ import { fetchLatestMessages, seedMessageWindowFromSession } from '@/lib/message
 import FilesPage from '@/routes/sessions/files'
 import FilePage from '@/routes/sessions/file'
 import TerminalPage from '@/routes/sessions/terminal'
+import PreviewPage from '@/routes/sessions/preview'
 import SettingsPage from '@/routes/settings'
 
 function BackIcon(props: { className?: string }) {
@@ -435,6 +436,18 @@ const sessionTerminalRoute = createRoute({
     component: TerminalPage,
 })
 
+const sessionPreviewRoute = createRoute({
+    getParentRoute: () => sessionDetailRoute,
+    path: 'preview',
+    validateSearch: (search: Record<string, unknown>): { url?: string; port?: string } => {
+        return {
+            url: typeof search.url === 'string' ? search.url : undefined,
+            port: typeof search.port === 'string' ? search.port : undefined
+        }
+    },
+    component: PreviewPage,
+})
+
 type SessionFileSearch = {
     path: string
     staged?: boolean
@@ -492,6 +505,7 @@ export const routeTree = rootRoute.addChildren([
             sessionTerminalRoute,
             sessionFilesRoute,
             sessionFileRoute,
+            sessionPreviewRoute,
         ]),
     ]),
     settingsRoute,

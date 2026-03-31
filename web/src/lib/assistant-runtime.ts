@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import type { AppendMessage, AttachmentAdapter, ThreadMessageLike } from '@assistant-ui/react'
 import { useExternalMessageConverter, useExternalStoreRuntime } from '@assistant-ui/react'
 import { safeStringify } from '@hapi/protocol'
@@ -168,6 +168,21 @@ function extractMessageContent(message: AppendMessage): { text: string; attachme
     return { text, attachments }
 }
 
+// Queue item for pending messages
+interface QueuedMessage {
+    text: string
+    attachments?: AttachmentMetadata[]
+    timestamp: number
+}
+
+export interface UseHappyRuntimeReturn {
+    runtime: ReturnType<typeof useExternalStoreRuntime>
+    isPaused: boolean
+    queuedMessageCount: number
+    onPauseToggle: () => Promise<void>
+    clearQueue: () => void
+}
+
 export function useHappyRuntime(props: {
     session: Session
     blocks: readonly ChatBlock[]
@@ -176,7 +191,12 @@ export function useHappyRuntime(props: {
     onAbort: () => Promise<void>
     attachmentAdapter?: AttachmentAdapter
     allowSendWhenInactive?: boolean
-}) {
+    onPausedChange?: (paused: boolean) => void
+}): UseHappyRuntimeReturn {
+    const [isPaused, setIsPaused] = useState(false)
+    const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([])
+    const queueProcessingRef = useRef(false)
+
     // Use cached message converter for performance optimization
     // This prevents re-converting all messages on every render
     const convertedMessages = useExternalMessageConverter<ChatBlock>({
@@ -188,12 +208,49 @@ export function useHappyRuntime(props: {
     const onNew = useCallback(async (message: AppendMessage) => {
         const { text, attachments } = extractMessageContent(message)
         if (!text && attachments.length === 0) return
+
+        // If paused, queue the message
+        if (isPaused) {
+            setMessageQueue(prev => [...prev, { text, attachments, timestamp: Date.now() }])
+            return
+        }
+
         props.onSendMessage(text, attachments.length > 0 ? attachments : undefined)
-    }, [props.onSendMessage])
+    }, [props.onSendMessage, isPaused])
 
     const onCancel = useCallback(async () => {
         await props.onAbort()
     }, [props.onAbort])
+
+    // Pause/resume generation
+    const onPauseToggle = useCallback(async () => {
+        if (isPaused) {
+            // Resume: process queued messages
+            setIsPaused(false)
+            props.onPausedChange?.(false)
+            // Process queue after resuming
+            if (messageQueue.length > 0 && !queueProcessingRef.current) {
+                queueProcessingRef.current = true
+                const queueToSend = [...messageQueue]
+                setMessageQueue([])
+                for (const msg of queueToSend) {
+                    props.onSendMessage(msg.text, msg.attachments?.length ? msg.attachments : undefined)
+                    // Small delay between messages to avoid race conditions
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                }
+                queueProcessingRef.current = false
+            }
+        } else {
+            // Pause: stop generation but keep session
+            setIsPaused(true)
+            props.onPausedChange?.(true)
+            await props.onAbort()
+        }
+    }, [isPaused, messageQueue, props])
+
+    const clearQueue = useCallback(() => {
+        setMessageQueue([])
+    }, [])
 
     // Memoize the adapter to avoid recreating on every render
     // useExternalStoreRuntime may use adapter identity for subscriptions
@@ -216,5 +273,11 @@ export function useHappyRuntime(props: {
         props.attachmentAdapter
     ])
 
-    return useExternalStoreRuntime(adapter)
+    return {
+        runtime: useExternalStoreRuntime(adapter),
+        isPaused,
+        queuedMessageCount: messageQueue.length,
+        onPauseToggle,
+        clearQueue
+    }
 }

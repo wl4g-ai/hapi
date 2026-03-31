@@ -259,6 +259,14 @@ export function SessionChat(props: {
         })
     }, [navigate, props.session.id])
 
+    const handleViewPreview = useCallback((port?: string, url?: string) => {
+        navigate({
+            to: '/sessions/$sessionId/preview',
+            params: { sessionId: props.session.id },
+            search: { port, url }
+        })
+    }, [navigate, props.session.id])
+
     const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
         props.onSend(text, attachments)
         setForceScrollToken((token) => token + 1)
@@ -281,12 +289,23 @@ export function SessionChat(props: {
         allowSendWhenInactive: true
     })
 
+    const [isPaused, setIsPaused] = useState(false)
+
+    useEffect(() => {
+        setIsPaused(runtime.isPaused)
+    }, [runtime.isPaused])
+
+    const handlePauseToggle = useCallback(async () => {
+        await runtime.onPauseToggle()
+    }, [runtime])
+
     return (
         <div className="flex h-full flex-col">
             <SessionHeader
                 session={props.session}
                 onBack={props.onBack}
                 onViewFiles={props.session.metadata?.path ? handleViewFiles : undefined}
+                onPreview={handleViewPreview}
                 api={props.api}
                 onSessionDeleted={props.onBack}
             />
@@ -354,6 +373,10 @@ export function SessionChat(props: {
                         voiceMicMuted={voice?.micMuted}
                         onVoiceToggle={voice ? handleVoiceToggle : undefined}
                         onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
+                        // Pause/resume generation
+                        isPaused={isPaused}
+                        onPauseToggle={handlePauseToggle}
+                        queuedMessageCount={runtime.queuedMessageCount}
                     />
                 </div>
             </AssistantRuntimeProvider>

@@ -43,6 +43,27 @@ function FilesIcon(props: { className?: string }) {
     )
 }
 
+function BrowserIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+    )
+}
+
 function MoreVerticalIcon(props: { className?: string }) {
     return (
         <svg
@@ -64,6 +85,7 @@ export function SessionHeader(props: {
     session: Session
     onBack: () => void
     onViewFiles?: () => void
+    onPreview?: () => void
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
@@ -159,6 +181,17 @@ export function SessionHeader(props: {
                             title={t('session.title')}
                         >
                             <FilesIcon />
+                        </button>
+                    ) : null}
+
+                    {props.onPreview ? (
+                        <button
+                            type="button"
+                            onClick={props.onPreview}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                            title="内置浏览器"
+                        >
+                            <BrowserIcon />
                         </button>
                     ) : null}
 

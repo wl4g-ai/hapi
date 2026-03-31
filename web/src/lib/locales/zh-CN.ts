@@ -210,6 +210,9 @@ export default {
   'composer.send': '发送',
   'composer.stop': '停止',
   'composer.voice': '语音助手',
+  'composer.pause': '暂停生成',
+  'composer.resume': '继续生成',
+  'composer.queued': '在队列中',
 
   // Voice assistant
   'voice.connecting': '连接中...',

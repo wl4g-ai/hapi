@@ -62,6 +62,10 @@ export function HappyComposer(props: {
     voiceMicMuted?: boolean
     onVoiceToggle?: () => void
     onVoiceMicToggle?: () => void
+    // Pause/resume generation
+    isPaused?: boolean
+    onPauseToggle?: () => void
+    queuedMessageCount?: number
 }) {
     const { t } = useTranslation()
     const {
@@ -87,7 +91,10 @@ export function HappyComposer(props: {
         voiceStatus = 'disconnected',
         voiceMicMuted = false,
         onVoiceToggle,
-        onVoiceMicToggle
+        onVoiceMicToggle,
+        isPaused = false,
+        onPauseToggle,
+        queuedMessageCount = 0
     } = props
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
@@ -154,6 +161,33 @@ export function HappyComposer(props: {
     const { isStandalone, isIOS } = usePWAInstall()
     const isIOSPWA = isIOS && isStandalone
     const bottomPaddingClass = isIOSPWA ? 'pb-0' : 'pb-3'
+
+    // iOS keyboard handling: use visual viewport API to adjust for keyboard
+    const [keyboardOffset, setKeyboardOffset] = useState(0)
+
+    useEffect(() => {
+        if (!isIOSPWA || !window.visualViewport) return
+
+        const handleVisualViewportChange = () => {
+            const visualViewport = window.visualViewport!
+            const fullHeight = window.innerHeight
+            const visibleHeight = visualViewport.height
+            const keyboardHeight = Math.max(0, fullHeight - visibleHeight)
+            setKeyboardOffset(keyboardHeight)
+        }
+
+        const visualViewport = window.visualViewport
+        visualViewport.addEventListener('resize', handleVisualViewportChange)
+        visualViewport.addEventListener('scroll', handleVisualViewportChange)
+
+        // Initial calculation
+        handleVisualViewportChange()
+
+        return () => {
+            visualViewport.removeEventListener('resize', handleVisualViewportChange)
+            visualViewport.removeEventListener('scroll', handleVisualViewportChange)
+        }
+    }, [isIOSPWA])
     const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
         activeWord,
@@ -596,7 +630,14 @@ export function HappyComposer(props: {
     ])
 
     return (
-        <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
+        <div
+            className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}
+            style={{
+                paddingBottom: isIOSPWA && keyboardOffset > 0
+                    ? `${Math.max(12, keyboardOffset - 20)}px`
+                    : undefined
+            }}
+        >
             <div className="mx-auto w-full max-w-content">
                 <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
                     {overlays}
@@ -660,6 +701,11 @@ export function HappyComposer(props: {
                             onVoiceToggle={onVoiceToggle ?? (() => {})}
                             onVoiceMicToggle={onVoiceMicToggle}
                             onSend={handleSend}
+                            // Pause/resume generation
+                            showPauseButton={true}
+                            isPaused={isPaused}
+                            onPauseToggle={onPauseToggle ?? (() => {})}
+                            queuedMessageCount={queuedMessageCount}
                         />
                     </div>
                 </ComposerPrimitive.Root>

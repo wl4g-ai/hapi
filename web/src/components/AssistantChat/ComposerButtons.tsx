@@ -194,6 +194,35 @@ function SendIcon() {
     )
 }
 
+function PauseIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+        >
+            <rect x="6" y="5" width="4" height="14" rx="1" />
+            <rect x="14" y="5" width="4" height="14" rx="1" />
+        </svg>
+    )
+}
+
+function PlayIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+        >
+            <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+    )
+}
+
 function StopIcon() {
     return (
         <svg
@@ -319,6 +348,12 @@ export function ComposerButtons(props: {
     onVoiceToggle: () => void
     onVoiceMicToggle?: () => void
     onSend: () => void
+    // Pause/resume generation
+    showPauseButton?: boolean
+    isPaused?: boolean
+    onPauseToggle?: () => void
+    // Message queue
+    queuedMessageCount?: number
 }) {
     const { t } = useTranslation()
     const isVoiceConnected = props.voiceStatus === 'connected'
@@ -402,16 +437,42 @@ export function ComposerButtons(props: {
                         <SpeakerIcon muted={props.voiceMicMuted} />
                     </button>
                 ) : null}
+
+                {props.showPauseButton && props.onPauseToggle ? (
+                    <button
+                        type="button"
+                        aria-label={props.isPaused ? t('composer.resume') : t('composer.pause')}
+                        title={props.isPaused ? t('composer.resume') : t('composer.pause')}
+                        disabled={props.controlsDisabled}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            props.isPaused
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-amber-600 text-white hover:bg-amber-700'
+                        }`}
+                        onClick={props.onPauseToggle}
+                    >
+                        {props.isPaused ? <PlayIcon /> : <PauseIcon />}
+                    </button>
+                ) : null}
             </div>
 
-            <UnifiedButton
-                canSend={props.canSend}
-                voiceStatus={props.voiceStatus}
-                voiceEnabled={props.voiceEnabled}
-                controlsDisabled={props.controlsDisabled}
-                onSend={props.onSend}
-                onVoiceToggle={props.onVoiceToggle}
-            />
+            <div className="flex items-center gap-2">
+                {props.queuedMessageCount != null && props.queuedMessageCount > 0 ? (
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-[var(--app-subtle-bg)] text-xs text-[var(--app-hint)]">
+                        <span>{props.queuedMessageCount}</span>
+                        <span>{t('composer.queued')}</span>
+                    </div>
+                ) : null}
+
+                <UnifiedButton
+                    canSend={props.canSend}
+                    voiceStatus={props.voiceStatus}
+                    voiceEnabled={props.voiceEnabled}
+                    controlsDisabled={props.controlsDisabled}
+                    onSend={props.onSend}
+                    onVoiceToggle={props.onVoiceToggle}
+                />
+            </div>
         </div>
     )
 }
